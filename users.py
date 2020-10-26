@@ -10,6 +10,10 @@ def readfile(path):
         return file.read()
 
 
+def shcmd(cmd):
+    return os.popen(cmd).read()
+
+
 # Function to read all the users from /etc/pass
 # Finds entries that end with *sh
 def getusers():
@@ -36,13 +40,30 @@ def remove_unauth(unauth):
     for user in unauth:
         print 'Deleting user: {}'.format(user)
         delcmd = 'sudo deluser --remove-home {}\n\n'.format(user)
-        print '> ' = delcmd
-        stdout = os.popen(delcmd).read()
+        print '> ' + delcmd
+        stdout = shcmd(delcmd)
         print stdout
 
 
-args = sys.argv
-users_path = args[1]
-unauth = get_unauth_users(users_path)
+def change_passwords(users):
+    current_user = shcmd("echo $USER")
+    for user in users:
+        # Don't change the password for current user
+        if user == current_user:
+            continue
 
-remove_unauth(unauth)
+        cmd = "echo '{}:{}' | sudo chpasswd".format(user, "Password123#!")
+        print "Changing password for {}".format(user)
+        print '> ' + cmd
+        # stdout = shcmd(cmd)
+        # print stdout
+
+
+# args = sys.argv
+# users_path = args[1]
+# unauth = get_unauth_users(users_path)
+
+# remove_unauth(unauth)
+
+users = getusers()
+change_passwords(users)
