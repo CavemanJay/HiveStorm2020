@@ -36,7 +36,7 @@ def remove_unauth(unauth):
     for user in unauth:
         print 'Deleting user: {}'.format(user)
         delcmd = 'sudo deluser --remove-home {}\n\n'.format(user)
-        print '> ' = delcmd
+        print '> ' + delcmd
         stdout = os.popen(delcmd).read()
         print stdout
 
