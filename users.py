@@ -110,26 +110,31 @@ def get_non_admins(path):
     return invalid_admins
 
 
-def remove_unauth(unauth):
+def remove_unauth(unauth, dry_run):
     """Removes a list of users from the system
 
     Args:
         unauth (list): List of unauthorized users
+        dry_run (bool): Whether or not to follow through with the operation
     """
     for user in unauth:
         print(f'Deleting user: {user}')
-        delcmd = f'sudo deluser --remove-home {user}\n\n'
+        delcmd = f'sudo deluser --remove-home {user}\n'
         print('> ' + delcmd)
-        stdout = shcmd(delcmd)
-        print(stdout)
+        if not dry_run:
+            stdout = shcmd(delcmd)
+            print(stdout)
+        else:
+            print("")
 
 
-def change_passwords(users, password="Password123#!"):
+def change_passwords(users, dry_run, password="Password123#!"):
     """Changes the password of all users specified to the password supplied.
     Does not change the password for the current user
 
     Args:
         users (list): The list of users
+        dry_run (bool): Whether or not to follow through with the operation
         password (str, optional): The password to set for all users. Defaults to "Password123#!".
     """
     # Strip newline character from echo command
@@ -139,25 +144,34 @@ def change_passwords(users, password="Password123#!"):
         if user == current_user:
             continue
         password = 'Password123#!'
-        cmd = f"echo '{user}:{password}' | sudo chpasswd"
+        cmd = f"echo '{user}:{password}' | sudo chpasswd\n"
         print(f"Changing password for {user}")
         print('> ' + cmd)
-        stdout = shcmd(cmd)
-        print(stdout)
+        if not dry_run:
+            stdout = shcmd(cmd)
+            print(stdout)
 
 
-def remove_sudoers(non_admins):
+def remove_sudoers(non_admins, dry_run):
     """Removes users from the sudo group
 
     Args:
         non_admins (list): The list of users to remove from the sudo group
+        dry_run (bool): Whether or not to follow through with the operation
     """
     for user in non_admins:
         print(f"Removing admin privileges for: {user}")
         cmd = f"sudo deluser {user} sudo"
         print("> " + cmd)
-        stdout = shcmd(cmd)
-        print(stdout)
+        if not dry_run:
+            stdout = shcmd(cmd)
+            print(stdout)
+
+
+def print_usage():
+    print(
+        "Usage:\n\n-h --help \n-d --dry-run\n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>")
+    sys.exit(0)
 
 
 def main(argv):
@@ -166,8 +180,11 @@ def main(argv):
     Args:
         argv (list): The cli arguments supplied to this file
     """
+    if len(argv) == 1:
+        print_usage()
+
     try:
-        opts, args = getopt.getopt(argv[1:], "hu:a:", ["users=", "admins="])
+        opts, args = getopt.getopt(argv[1:], "hdu:a:", ["users=", "admins="])
     except getopt.GetoptError:
         print(argv[0] + ": Incorrect Syntax, try '-h' for help.")
         sys.exit(2)
@@ -175,36 +192,36 @@ def main(argv):
     # Set the options based on arguments passed in
     USERFILE = None
     ADMINFILE = None
+    dry_run = False
     for opt, arg in opts:
         if opt == "-h" or opt == "--help":
-            print(
-                "Usage:\n\n-h --help \n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>")
-            sys.exit(0)
+            print_usage()
         elif opt == "-u" or opt == '--users':
             USERFILE = arg
         elif opt == "-a" or opt == '--admins':
             ADMINFILE = arg
+        elif opt == '-d' or opt == '--dry-run':
+            dry_run = True
 
-    if USERFILE is not None:
-        invalid_users = get_unauth_users(USERFILE)
-    else:
-        print("User file is required.")
-        exit()
+    if USERFILE is None:
+        raise ValueError("User file is a required argument.")
 
-    # Remove unAuth Users from /etc/passwd
-    remove_unauth(invalid_users)
+    if ADMINFILE is None:
+        raise ValueError("Admin file is a required argument.")
 
-    if ADMINFILE is not None:
-        invalid_admins = get_non_admins(ADMINFILE)
-        remove_sudoers(invalid_admins)
-    else:
-        print("Admin file is required.")
-        exit()
+    if dry_run:
+        print("Running in dry-run mode\n")
+
+    invalid_users = get_unauth_users(USERFILE)
+    remove_unauth(invalid_users, dry_run)
+
+    invalid_admins = get_non_admins(ADMINFILE)
+    remove_sudoers(invalid_admins, dry_run)
 
     # Read /etc/passwd and parse current users
     current_users = getusers()
-    change_passwords(current_users)
+    change_passwords(current_users, dry_run)
 
 
 if __name__ == "__main__":
-    main(sys.argv[0:])
+    main(sys.argv)
