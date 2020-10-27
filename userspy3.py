@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import getopt 
 import os
@@ -10,7 +10,7 @@ def readfile(path):
         with open(path) as file:
             return file.read()
     except IOError as ex:
-        print " ".join(str(ex).split(' ')[2:])
+        print (" ".join(str(ex).split(' ')[2:]))
         sys.exit(ex.errno)
 
 def exit():
@@ -53,11 +53,11 @@ def get_non_admins(path,sudoers):
 # Remove unauthorized users
 def remove_unauth(unauth):
     for user in unauth:
-        print 'Deleting user: {}'.format(user)
-        delcmd = 'sudo deluser --remove-home {}\n\n'.format(user)
-        print '> ' + delcmd
+        print (f'Deleting user: {user}')
+        delcmd = f'sudo deluser --remove-home {user}\n\n'
+        print ('> ' + delcmd)
         stdout = shcmd(delcmd)
-        print stdout
+        print (stdout)
 
 
 def change_passwords(users):
@@ -67,12 +67,12 @@ def change_passwords(users):
         # Don't change the password for current user
         if user == current_user:
             continue
-
-        cmd = "echo '{}:{}' | sudo chpasswd".format(user, "Password123#!")
-        print "Changing password for {}".format(user)
-        print '> ' + cmd
+        password = 'Password123#!'
+        cmd = f"echo '{user}:{password}' | sudo chpasswd"
+        print(f"Changing password for {user}")
+        print('> ' + cmd)
         stdout = shcmd(cmd)
-        print stdout
+        print(stdout)
 
 # Gets the users that are capable of running sudo
 def get_sudoers():
@@ -80,7 +80,7 @@ def get_sudoers():
 
     users = getusers()
     for user in users:
-        cmd = "sudo -l -U {}".format(user)
+        cmd = f"sudo -l -U {user}"
         stdout = shcmd(cmd)
         if "not allowed" not in stdout:
             sudoers.append(user)
@@ -89,11 +89,11 @@ def get_sudoers():
 
 def remove_sudoers(non_admins):
     for user in non_admins:
-        print "Removing admin privileges for: {}".format(user)
-        cmd = "sudo deluser {} sudo".format(user)
-        print "> " + cmd
+        print(f"Removing admin privileges for: {user}")
+        cmd = f"sudo deluser {user} sudo"
+        print("> " + cmd)
         stdout = shcmd(cmd)
-        print stdout
+        print (stdout)
 
 # https://docs.python.org/2/library/getopt.html
 
@@ -120,7 +120,7 @@ def main(argv):
     if USERFILE is not None:
         invalid_users = get_unauth_users(USERFILE)
     else:
-        print "User file is required."
+        print("User file is required.")
         exit()
 
     #Remove unAuth Users from /etc/passwd
@@ -131,7 +131,7 @@ def main(argv):
         invalid_admins = get_non_admins(ADMINFILE,current_admins)
         remove_sudoers(invalid_admins)
     else:
-        print "Admin file is required."
+        print("Admin file is required.")
         exit()
 
     # Read /etc/passwd and parse current users
