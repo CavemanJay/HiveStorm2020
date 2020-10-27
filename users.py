@@ -135,8 +135,8 @@ def main(argv):
         exit()
 
     # Read /etc/passwd and parse current users
-    #current_users = getusers()
-    # change_passwords(current_users)
+    current_users = getusers()
+    change_passwords(current_users)
 
 
 if __name__ == "__main__":
