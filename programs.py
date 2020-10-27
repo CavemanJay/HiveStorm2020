@@ -33,7 +33,8 @@ def get_acceptable_programs(installed):
                            r'ncurses.*', r'systemd.*', r'vim.*', r'dconf.*',
                            r'dpkg*', r'initra.*', r'glib.*', 'g\+\+.*', r'cloud.*',
                            r'cpp.*', r'openssh.*', r'xorg.*', r'bash.*', r'dbus.*',
-                           r'gpg.*', r'gnupg.*', r'ubuntu.*']
+                           r'gpg.*', r'gnupg.*', r'ubuntu.*', r'xserver.*', r'xfonts.*',
+                           r'x11-.*', r'unity-.*']
     accepted_programs = []
     for pattern in acceptable_patterns:
         for program in installed:
