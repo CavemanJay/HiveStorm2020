@@ -1,6 +1,7 @@
 import sys
 import os
 
+
 def readfile(path):
     """Will read a file from the specified path. 
     Exits the program if the file cannot be found
@@ -34,3 +35,15 @@ def shcmd(cmd):
         string: The resulting stdout of the command
     """
     return os.popen(cmd).read()
+
+
+def print_red(text):
+    print("\033[91m{}\033[0m".format(text))
+
+
+def print_green(text):
+    print("\033[92m{}\033[0m".format(text))
+
+
+def print_yellow(text):
+    print("\033[93m{}\033[0m".format(text))
