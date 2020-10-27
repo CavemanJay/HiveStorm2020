@@ -119,23 +119,23 @@ def main(argv):
 
     if USERFILE is not None:
         invalid_users = get_unauth_users(USERFILE)
-        print invalid_users
     else:
         print "User file is required."
         exit()
 
-    # Remove unAuth Users from /etc/passwd
-    # remove_unauth(invalid_users)
+    #Remove unAuth Users from /etc/passwd
+    remove_unauth(invalid_users)
 
     if ADMINFILE is not None:
         current_admins = get_sudoers()
         invalid_admins = get_non_admins(ADMINFILE,current_admins)
+        remove_sudoers(invalid_admins)
     else:
         print "Admin file is required."
         exit()
 
     # Read /etc/passwd and parse current users
-    current_users = getusers()
+    #current_users = getusers()
     # change_passwords(current_users)
 
 
