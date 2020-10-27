@@ -1,13 +1,20 @@
 #!/usr/bin/python2
 
+import getopt 
 import os
 import sys
 
 # Helper function to read a file from a path
 def readfile(path):
-    with open(path) as file:
-        return file.read()
+    try:
+        with open(path) as file:
+            return file.read()
+    except IOError as ex:
+        print " ".join(str(ex).split(' ')[2:])
+        sys.exit(ex.errno)
 
+def exit():
+    sys.exit(1)
 
 def shcmd(cmd):
     return os.popen(cmd).read()
@@ -31,15 +38,17 @@ def get_unauth_users(path):
     current_users = getusers()
     allowed_users = readfile(path)
     unauth = [u for u in current_users if u not in allowed_users]
+    unauth.remove('root')
     return unauth
 
 def get_non_admins(path,sudoers):
     # Get list of allowed admins
     allowed_admins = readfile(path).split('\n')
     # Return list of users that are not in that list
-    return [ user for user in sudoers if user not in allowed_admins ]
-    
-    
+    invalid_admins = [ user for user in sudoers if user not in allowed_admins]
+    invalid_admins.remove('root')
+
+    return invalid_admins
 
 # Remove unauthorized users
 def remove_unauth(unauth):
@@ -66,9 +75,10 @@ def change_passwords(users):
         print stdout
 
 # Gets the users that are capable of running sudo
-def get_sudoers(users):
+def get_sudoers():
     sudoers = []
 
+    users = getusers()
     for user in users:
         cmd = "sudo -l -U {}".format(user)
         stdout = shcmd(cmd)
@@ -85,16 +95,49 @@ def remove_sudoers(non_admins):
         stdout = shcmd(cmd)
         print stdout
 
-args = sys.argv
-users_path = args[1]
-admin_users_path = args[2]
+# https://docs.python.org/2/library/getopt.html
 
-# unauth = get_unauth_users(users_path)
-# remove_unauth(unauth)
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv[1:], "hu:a:",["users=","admins="])
+    except getopt.GetoptError:
+        print(argv[0] + ": Incorrect Syntax, try '-h' for help.")
+        sys.exit(2)
 
-users = getusers()
-# change_passwords(users)
+    # Set the options based on arguments passed in
+    USERFILE = None
+    ADMINFILE = None
+    for opt, arg in opts:
+        if opt == "-h" or opt == "--help":
+            print("Usage:\n\n-h --help \n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>")
+            sys.exit(0)
+        elif opt == "-u" or opt == '--users':
+            USERFILE = arg
+        elif opt == "-a" or opt == '--admins':
+            ADMINFILE = arg
 
-current_admins=get_sudoers(users)
 
-non_admins = get_non_admins(admin_users_path,current_admins)
+    if USERFILE is not None:
+        invalid_users = get_unauth_users(USERFILE)
+        print invalid_users
+    else:
+        print "User file is required."
+        exit()
+
+    # Remove unAuth Users from /etc/passwd
+    # remove_unauth(invalid_users)
+
+    if ADMINFILE is not None:
+        current_admins = get_sudoers()
+        invalid_admins = get_non_admins(ADMINFILE,current_admins)
+    else:
+        print "Admin file is required."
+        exit()
+
+    # Read /etc/passwd and parse current users
+    current_users = getusers()
+    # change_passwords(current_users)
+
+
+if __name__ == "__main__":
+    main(sys.argv[0:])
