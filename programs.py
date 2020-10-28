@@ -53,6 +53,18 @@ def get_acceptable_programs(installed):
     return accepted_programs
 
 
+def list_services():
+    cmd = "systemctl list-unit-files"
+    stdout = shcmd(cmd)
+    lines = "\n".join([line for line in stdout.split('\n')
+                       if "disabled" not in line
+                       and "systemd-" not in line
+                       and "dbus-org" not in line
+                       and "initrd-" not in line])
+    print(stdout)
+    print(lines)
+
+
 def find_suids():
     print("SUID binaries on this machine:\n")
     cmd = "find / -perm /4000 2>/dev/null"
@@ -63,5 +75,8 @@ if __name__ == "__main__":
     programs = get_installed_programs()
     accepted = get_acceptable_programs(programs)
     to_examine = [p for p in programs if p not in accepted]
+    print("System packages to examine:\n")
     pprint(to_examine)
+
+    list_services()
     # find_suids()
