@@ -74,6 +74,7 @@ def find_suids():
 if __name__ == "__main__":
     programs = get_installed_programs()
     accepted = get_acceptable_programs(programs)
+
     to_examine = [p for p in programs if p not in accepted]
     print("System packages to examine:\n")
     pprint(to_examine)
