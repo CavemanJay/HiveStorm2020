@@ -3,6 +3,7 @@
 import getopt
 from utils import readfile, shcmd, exit
 import sys
+import re
 
 
 def getusers():
@@ -133,6 +134,29 @@ def remove_sudoers(non_admins, dry_run):
             print(stdout)
 
 
+def remove_root_ssh(dry_run):
+    """Sets PermitRootLogin to no in /etc/sshd_config
+
+    Args:
+        dry_run (bool): Whether dry run mode is enabled
+    """
+    config_path = "/etc/ssh/sshd_config"
+    lines = readfile(config_path).split('\n')
+    pattern = '^#?PermitRootLogin'
+
+    for (i, line) in enumerate(lines):
+        match = re.search(pattern, line)
+        if match is not None:
+            lines[i] = "PermitRootLogin no"
+
+    config_file = "{}".format('\n'.join(lines))
+    print("\nRemoving root ssh login")
+    cmd = "sudo cat << EOF > {}\n{}\nEOF".format(config_path, config_file)
+
+    if not dry_run:
+        shcmd(cmd)
+
+
 def print_usage():
     print(
         "Usage:\n\n-h --help \n-d --dry-run\n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>")
@@ -178,14 +202,16 @@ def main(argv):
         print("Running in dry-run mode\n")
 
     invalid_users = get_unauth_users(USERFILE)
-    remove_unauth(invalid_users, dry_run)
+    # remove_unauth(invalid_users, dry_run)
 
     invalid_admins = get_non_admins(ADMINFILE)
-    remove_sudoers(invalid_admins, dry_run)
+    # remove_sudoers(invalid_admins, dry_run)
 
     # Read /etc/passwd and parse current users
     current_users = getusers()
-    change_passwords(current_users, dry_run)
+    # change_passwords(current_users, dry_run)
+
+    remove_root_ssh(dry_run)
 
 
 if __name__ == "__main__":
