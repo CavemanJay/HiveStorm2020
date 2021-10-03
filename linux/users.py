@@ -32,7 +32,7 @@ def get_sudoers():
 
     users = getusers()
     for user in users:
-        cmd = f"sudo -l -U {user}"
+        cmd = "sudo -l -U" + user
         stdout = shcmd(cmd)
         if "not allowed" not in stdout:
             sudoers.append(user)
@@ -110,8 +110,8 @@ def change_passwords(users, dry_run, password="Password123#!"):
         if user == current_user:
             continue
         password = 'Password123#!'
-        cmd = f"echo '{user}:{password}' | sudo chpasswd\n"
-        print(f"Changing password for {user}")
+        cmd = "echo '{}:{}' | sudo chpasswd\n".format(user, password)
+        print("Changing password for {}").format(user)
         print('> ' + cmd)
         if not dry_run:
             stdout = shcmd(cmd)
@@ -126,8 +126,8 @@ def remove_sudoers(non_admins, dry_run):
         dry_run (bool): Whether or not to follow through with the operation
     """
     for user in non_admins:
-        print(f"Removing admin privileges for: {user}")
-        cmd = f"sudo deluser {user} sudo"
+        print("Removing admin privileges for: " +user)
+        cmd = "sudo deluser {} sudo".format(user)
         print("> " + cmd)
         if not dry_run:
             stdout = shcmd(cmd)
