@@ -155,7 +155,17 @@ def remove_root_ssh(dry_run):
 
     if not dry_run:
         shcmd(cmd)
-
+def disable_guest_account(dry_run):
+    config_path = "/etc/lightdm/lightdm.conf"
+    lines = readfile(config_path).split('\n')
+    pattern = '^#?allow-guest'
+    for (i, line) in enumerate(lines):
+        match = re.search(pattern, line)
+        if match is not None:
+            lines[i] = "allow=guest=false"
+    config_file = "{}".format('\n'.join(lines))
+    print("\n Removing guest account")
+    cmd = "sudo cat << EOF > {}\n{}\nEOF".format(config_path, config_file)
 
 def print_usage():
     print(
