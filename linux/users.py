@@ -84,7 +84,7 @@ def remove_unauth(unauth, dry_run):
         dry_run (bool): Whether or not to follow through with the operation
     """
     for user in unauth:
-        print('Deleting user: {}').format(user)
+        print('Deleting user: {}'.format(user))
         delcmd = 'sudo deluser --remove-home {}\n'.format(user)
         print('> ' + delcmd)
         if not dry_run:
@@ -111,7 +111,7 @@ def change_passwords(users, dry_run, password="Password123#!"):
             continue
         password = 'Password123#!'
         cmd = "echo '{}:{}' | sudo chpasswd\n".format(user, password)
-        print("Changing password for {}").format(user)
+        print("Changing password for {}".format(user))
         print('> ' + cmd)
         if not dry_run:
             stdout = shcmd(cmd)
@@ -202,14 +202,14 @@ def main(argv):
         print("Running in dry-run mode\n")
 
     invalid_users = get_unauth_users(USERFILE)
-    # remove_unauth(invalid_users, dry_run)
+    remove_unauth(invalid_users, dry_run)
 
     invalid_admins = get_non_admins(ADMINFILE)
-    # remove_sudoers(invalid_admins, dry_run)
+    remove_sudoers(invalid_admins, dry_run)
 
     # Read /etc/passwd and parse current users
     current_users = getusers()
-    # change_passwords(current_users, dry_run)
+    change_passwords(current_users, dry_run)
 
     remove_root_ssh(dry_run)
 
