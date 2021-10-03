@@ -166,6 +166,8 @@ def disable_guest_account(dry_run):
     config_file = "{}".format('\n'.join(lines))
     print("\n Removing guest account")
     cmd = "sudo cat << EOF > {}\n{}\nEOF".format(config_path, config_file)
+    if not dry_run:
+        shcmd(cmd)
 
 def print_usage():
     print(
@@ -222,6 +224,8 @@ def main(argv):
     change_passwords(current_users, dry_run)
 
     remove_root_ssh(dry_run)
+
+    disable_guest_account(dry_run)
 
 
 if __name__ == "__main__":
