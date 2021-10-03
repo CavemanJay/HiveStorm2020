@@ -84,8 +84,8 @@ def remove_unauth(unauth, dry_run):
         dry_run (bool): Whether or not to follow through with the operation
     """
     for user in unauth:
-        print(f'Deleting user: {user}')
-        delcmd = f'sudo deluser --remove-home {user}\n'
+        print('Deleting user: {}').format(user)
+        delcmd = 'sudo deluser --remove-home {}\n'.format(user)
         print('> ' + delcmd)
         if not dry_run:
             stdout = shcmd(delcmd)
