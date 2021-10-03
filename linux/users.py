@@ -105,9 +105,10 @@ def change_passwords(users, dry_run, password="Password123#!"):
     """
     # Strip newline character from echo command
     current_user = shcmd("echo $USER").strip()
+    main_user = "ratchet"# hard code this
     for user in users:
         # Don't change the password for current user
-        if user == current_user:
+        if user == current_user or user == main_user:
             continue
         password = 'Password123#!'
         cmd = "echo '{}:{}' | sudo chpasswd\n".format(user, password)
@@ -173,7 +174,7 @@ def disable_guest_account(dry_run):
 
 def print_usage():
     print(
-        "Usage:\n\n-h --help \n-d --dry-run\n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>")
+        "Usage:\n\n-h --help \n-d --dry-run\n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>\n[*] Don't forget to hardcode 'main_user'")
     sys.exit(0)
 
 
