@@ -167,7 +167,7 @@ def disable_guest_account(dry_run):
         else:
             lines.append('allow-guest=false')
     config_file = "{}".format('\n'.join(lines))
-    print("\n Removing guest account")
+    print("\nRemoving guest account")
     cmd = "sudo cat << EOF > {}\n{}\nEOF".format(config_path, config_file)
     if not dry_run:
         shcmd(cmd)
