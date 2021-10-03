@@ -162,7 +162,9 @@ def disable_guest_account(dry_run):
     for (i, line) in enumerate(lines):
         match = re.search(pattern, line)
         if match is not None:
-            lines[i] = "allow=guest=false"
+            lines[i] = "allow-guest=false"
+        else:
+            lines.append('allow-guest=false')
     config_file = "{}".format('\n'.join(lines))
     print("\n Removing guest account")
     cmd = "sudo cat << EOF > {}\n{}\nEOF".format(config_path, config_file)
