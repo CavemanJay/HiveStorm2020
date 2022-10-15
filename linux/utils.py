@@ -47,3 +47,11 @@ def print_green(text):
 
 def print_yellow(text):
     print("\033[93m{}\033[0m".format(text))
+
+def read_passwd():
+    with open('/etc/passwd') as f:
+        return f.readlines()
+
+def read_shadow():
+    with open('/etc/shadow') as f:
+        return f.readlines()

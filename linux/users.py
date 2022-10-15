@@ -1,36 +1,30 @@
 #!/usr/bin/python3
 
-import getopt
-from utils import readfile, shcmd, exit
+from typing import List
+from utils import print_green, print_red, print_yellow, read_passwd, read_shadow, readfile, shcmd, exit
 import sys
 import re
+import argparse
+import os
 
 
-def getusers():
+def get_users():
     """Returns the list of users from /etc/passwd that contain login shells
-    ending with 'sh'
-
-    Returns:
-        list: A list of users
-    """
+    ending with 'sh'"""
     # Read the file
-    entries = readfile('/etc/passwd').split('\n')
+    entries = read_passwd()
     # Get all lines that end with sh
-    entries = [e for e in entries if e.endswith('sh')]
+    entries = (e for e in entries if e.strip().endswith('sh'))
     # Return the list of usernames
     users = [x.split(':')[0] for x in entries]
     return users
 
 
 def get_sudoers():
-    """Returns a list of users capable of running sudo
-
-    Returns:
-        list: List of system usernames
-    """
+    """Returns a list of users capable of running sudo"""
     sudoers = []
 
-    users = getusers()
+    users = get_users()
     for user in users:
         cmd = "sudo -l -U" + user
         stdout = shcmd(cmd)
@@ -40,107 +34,97 @@ def get_sudoers():
     return sudoers
 
 
-def get_unauth_users(path):
-    """Gets a list of unauthorized users by comparing the current users on the system
-    to the contents of a file
-
-    Args:
-        path (string): The path of the newline-separated authorized users list
-
-    Returns:
-        list: The list of unauthorized users
-    """
-    current_users = getusers()
-    allowed_users = readfile(path)
-    unauth = [u for u in current_users if u not in allowed_users]
-    unauth.remove('root')
+def get_unauth_users(users: List[str]):
+    current_users = get_users()
+    unauth = [u for u in current_users if u not in users and u != 'root']
     return unauth
 
 
-def get_non_admins(path):
-    """Returns a list of users that currently have sudo capabilities that shouldn't
+def check_passwd_file():
+    entries = read_passwd()
+    users_w_no_pass = [x.split(":")[0]
+                       for x in entries if x.split(":")[1] == ""]
+    plaintext_passwds = [x for x in [x.split(":")[0]
+                                     for x in entries if x.split(":")[1] != "x"] if x not in users_w_no_pass]
+    if users_w_no_pass:
+        print_red(f"Users with no password: {users_w_no_pass}")
+    if plaintext_passwds:
+        print_red(f"Users with plaintext password entry: {plaintext_passwds}")
 
-    Args:
-        path (string): The path to a newline-separated list of authorized sudoers
 
-    Returns:
-        list: The list of people who should be removed from sudo group
-    """
+def handle_passwords(main_user: str, dry_run: bool):
+    check_passwd_file()
+    change_passwords(main_user, dry_run)
+
+    # TODO: 
+        # Password expiration age
+        # Minimum password length
+        # Dictionary based password strength checks
+            # These are the standard /etc/pam.d/common-auth and /etc/pam.d/common-password configurations
+
+
+def handle_users(users: List[str], dry_run: bool):
+    unauth_users = get_unauth_users(users)
+    if unauth_users:
+        print_red(f"Unauthorized users: {unauth_users}")
+    if not dry_run:
+        remove_unauth_users(unauth_users)
+
+
+def handle_sudoers(admins: List[str], dry_run: bool):
+    invalid = get_invalid_admins(admins)
+    if invalid:
+        print_red(f"Unauthorized admins: {invalid}")
+    if not dry_run:
+        remove_sudoers(invalid)
+
+
+def get_invalid_admins(allowed_admins: List[str]):
     sudoers = get_sudoers()
-    # Get list of allowed admins
-    allowed_admins = readfile(path).split('\n')
-    # Return list of users that are not in that list
     invalid_admins = [user for user in sudoers if user not in allowed_admins]
     invalid_admins.remove('root')
-
     return invalid_admins
 
 
-def remove_unauth(unauth, dry_run):
-    """Removes a list of users from the system
-
-    Args:
-        unauth (list): List of unauthorized users
-        dry_run (bool): Whether or not to follow through with the operation
-    """
+def remove_unauth_users(unauth: List[str]):
+    """Removes a list of users from the system"""
     for user in unauth:
         print('Deleting user: {}'.format(user))
         delcmd = 'sudo deluser --remove-home {}\n'.format(user)
         print('> ' + delcmd)
-        if not dry_run:
-            stdout = shcmd(delcmd)
-            print(stdout)
-        else:
-            print("")
+        stdout = shcmd(delcmd)
+        print(stdout)
 
 
-def change_passwords(users, dry_run, password="Password123#!"):
+def change_passwords(main_user: str, dry_run: bool, password="Password123#!"):
     """Changes the password of all users specified to the password supplied.
-    Does not change the password for the current user
-
-    Args:
-        users (list): The list of users
-        dry_run (bool): Whether or not to follow through with the operation
-        password (str, optional): The password to set for all users. Defaults to "Password123#!".
-    """
+    Does not change the password for the current user"""
     # Strip newline character from echo command
-    current_user = shcmd("echo $USER").strip()
-    main_user = "ratchet"# hard code this
-    for user in users:
+    current_user = shcmd("echo -n $USER")
+    for user in get_users():
         # Don't change the password for current user
         if user == current_user or user == main_user:
             continue
-        password = 'Password123#!'
-        cmd = "echo '{}:{}' | sudo chpasswd\n".format(user, password)
-        print("Changing password for {}".format(user))
+        cmd = "echo '{}:{}' | chpasswd\n".format(user, password)
+        print_yellow("Changing password for {}".format(user))
         print('> ' + cmd)
         if not dry_run:
             stdout = shcmd(cmd)
             print(stdout)
 
 
-def remove_sudoers(non_admins, dry_run):
-    """Removes users from the sudo group
-
-    Args:
-        non_admins (list): The list of users to remove from the sudo group
-        dry_run (bool): Whether or not to follow through with the operation
-    """
+def remove_sudoers(non_admins: List[str]):
+    """Removes users from the sudo group"""
     for user in non_admins:
-        print("Removing admin privileges for: " +user)
+        print("Removing admin privileges for: " + user)
         cmd = "sudo deluser {} sudo".format(user)
         print("> " + cmd)
-        if not dry_run:
-            stdout = shcmd(cmd)
-            print(stdout)
+        stdout = shcmd(cmd)
+        print(stdout)
 
 
 def remove_root_ssh(dry_run):
-    """Sets PermitRootLogin to no in /etc/sshd_config
-
-    Args:
-        dry_run (bool): Whether dry run mode is enabled
-    """
+    """Sets PermitRootLogin to no in /etc/sshd_config"""
     config_path = "/etc/ssh/sshd_config"
     lines = readfile(config_path).split('\n')
     pattern = '^#?PermitRootLogin'
@@ -156,6 +140,8 @@ def remove_root_ssh(dry_run):
 
     if not dry_run:
         shcmd(cmd)
+
+
 def disable_guest_account(dry_run):
     config_path = "/etc/lightdm/lightdm.conf"
     lines = readfile(config_path).split('\n')
@@ -172,20 +158,51 @@ def disable_guest_account(dry_run):
     if not dry_run:
         shcmd(cmd)
 
-def print_usage():
-    print(
-        "Usage:\n\n-h --help \n-d --dry-run\n\nRequired:\n[*] -u --users <Authorized Users List Path>\n[*] -a --admins <Admin Users List Path>\n[*] Don't forget to hardcode 'main_user'")
-    sys.exit(0)
 
+def main():
+    is_root = os.getgid() == 0
+    if not is_root:
+        print("This script requires root permissions")
+        sys.exit(1)
 
-def main(argv):
-    """The main function of this program file
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "main_user", help="Main user of the machine (do not change their password)")
+    parser.add_argument(
+        "-x", "--execute", help="Actually change things on the system", action='store_true')
+    parser.add_argument(
+        "-u", "--users", help="Comma separated list of authorized users")
+    parser.add_argument(
+        "-a", "--admins", help="Comma separated list of authorized admins")
+    parser.add_argument(
+        "-p", "--passwords", help="Check password requirements", action='store_true')
+    parser.add_argument(
+        "-r", "--root-ssh", help="Check the status of root ssh login", action='store_true')
 
-    Args:
-        argv (list): The cli arguments supplied to this file
-    """
-    if len(argv) == 1:
-        print_usage()
+    args = parser.parse_args()
+
+    dry_run: bool = not args.execute
+    main_user: str = args.main_user
+
+    if args.users:
+        users = readfile(args.users).splitlines() if os.path.exists(
+            args.users) else args.users.split(",") + [main_user]
+        print_green(f"Authorized users: {users}")
+        handle_users(users, dry_run)
+
+    if args.admins:
+        admins = readfile(args.admins).splitlines() if os.path.exists(
+            args.admins) else args.admins.split(",") + [main_user]
+        print_green(f"Authorized admins: {admins}")
+        handle_sudoers(admins, dry_run)
+
+    if args.passwords:
+        handle_passwords(main_user, dry_run)
+
+    if args.root_ssh:
+        remove_root_ssh(dry_run)
+
+    return
 
     try:
         opts, args = getopt.getopt(argv[1:], "hdu:a:", ["users=", "admins="])
@@ -217,19 +234,17 @@ def main(argv):
         print("Running in dry-run mode\n")
 
     invalid_users = get_unauth_users(USERFILE)
-    remove_unauth(invalid_users, dry_run)
+    remove_unauth_users(invalid_users, dry_run)
 
-    invalid_admins = get_non_admins(ADMINFILE)
+    invalid_admins = get_invalid_admins(ADMINFILE)
     remove_sudoers(invalid_admins, dry_run)
 
     # Read /etc/passwd and parse current users
-    current_users = getusers()
+    current_users = get_users()
     change_passwords(current_users, dry_run)
-
     remove_root_ssh(dry_run)
-
     disable_guest_account(dry_run)
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
