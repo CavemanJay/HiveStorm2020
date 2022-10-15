@@ -70,8 +70,6 @@ def handle_users(users: List[str], dry_run: bool):
     if not dry_run:
         remove_unauth_users(unauth_users)
 
-    disable_guest_account(dry_run)
-
 
 def handle_sudoers(admins: List[str], dry_run: bool):
     invalid = get_invalid_admins(admins)
